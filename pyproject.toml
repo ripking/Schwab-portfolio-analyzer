@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "schwab-portfolio-tracker"
+version = "0.1.0"
+description = "Nightly Schwab portfolio snapshot pipeline into PostgreSQL with on-demand markdown export."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "ripking" }]
+dependencies = [
+    "requests>=2.31",
+    "click>=8.1",
+    "python-dotenv>=1.0",
+    "psycopg2-binary>=2.9",
+    "pytz>=2024.1",
+]
+
+[project.scripts]
+schwab-tracker = "schwab_tracker.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["schwab_tracker*"]
