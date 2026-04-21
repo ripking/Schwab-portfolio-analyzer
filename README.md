@@ -38,28 +38,108 @@ markdown report from any historical snapshot date already in the database.
 
 ## Install on Unraid
 
+Two supported paths:
+
+- **Docker (recommended)** — no host Python required. See
+  "Install on Unraid (Docker)" below.
+- **Native with NerdTools** — install Python via the NerdTools plugin and
+  `pip install` the package. See "Install on Unraid (native)" below.
+
+## Install on Unraid (Docker)
+
+This path runs the tracker in its own container. Postgres can be any
+reachable instance — if it is another Unraid container, using
+`--network=host` on the tracker is the simplest way to let them talk.
+
 1. Open the Unraid terminal (via the UI or SSH).
-2. Install `pip` if it is not already present:
+2. Create the app directory and fetch the repo (no `git` required —
+   `curl` works):
 
    ```bash
-   python3 -m ensurepip
+   mkdir -p /mnt/user/appdata/schwab-portfolio-tracker
+   cd /mnt/user/appdata/schwab-portfolio-tracker
+   curl -L https://github.com/YOUR_USERNAME/schwab-portfolio-tracker/archive/refs/heads/main.tar.gz \
+       | tar xz --strip-components=1
    ```
 
-3. Clone the repo into the Unraid `appdata` share:
+3. Build the Docker image:
+
+   ```bash
+   docker build -t schwab-portfolio-tracker:latest .
+   ```
+
+4. Define a helper that mounts `.env` and the token volume so you don't
+   have to retype the flags every time. Add this to your shell or keep it
+   in a script:
+
+   ```bash
+   APP_DIR=/mnt/user/appdata/schwab-portfolio-tracker
+   mkdir -p "$APP_DIR/tokens"
+
+   schwab-tracker() {
+     docker run --rm -it \
+       --network=host \
+       -v "$APP_DIR":/data \
+       -v "$APP_DIR/tokens":/root/.schwab_tracker \
+       -w /data \
+       schwab-portfolio-tracker:latest "$@"
+   }
+   ```
+
+5. Run the setup wizard (interactive):
+
+   ```bash
+   schwab-tracker setup
+   ```
+
+   The wizard writes `.env` into `$APP_DIR` on the host, so it survives
+   container rebuilds. Tokens are written to `$APP_DIR/tokens/` on the
+   host (mounted to `/root/.schwab_tracker` inside the container).
+
+6. To run the nightly pull non-interactively from cron, use
+   `-v` but drop `-it`:
+
+   ```bash
+   docker run --rm \
+       --network=host \
+       -v /mnt/user/appdata/schwab-portfolio-tracker:/data \
+       -v /mnt/user/appdata/schwab-portfolio-tracker/tokens:/root/.schwab_tracker \
+       -w /data \
+       schwab-portfolio-tracker:latest pull \
+       >> /mnt/user/appdata/schwab-portfolio-tracker/pull.log 2>&1
+   ```
+
+### Updating
+
+```bash
+cd /mnt/user/appdata/schwab-portfolio-tracker
+curl -L https://github.com/YOUR_USERNAME/schwab-portfolio-tracker/archive/refs/heads/main.tar.gz \
+    | tar xz --strip-components=1
+docker build -t schwab-portfolio-tracker:latest .
+```
+
+Your `.env` and tokens persist on the host — they are not touched by the
+rebuild.
+
+## Install on Unraid (native)
+
+1. Install the NerdTools plugin from Community Apps and enable Python
+   3.10+ and git.
+2. Clone the repo into the Unraid `appdata` share:
 
    ```bash
    git clone https://github.com/YOUR_USERNAME/schwab-portfolio-tracker.git \
        /mnt/user/appdata/schwab-portfolio-tracker
    ```
 
-4. Install the package:
+3. Install the package:
 
    ```bash
    cd /mnt/user/appdata/schwab-portfolio-tracker
    pip3 install -e .
    ```
 
-5. Run the setup wizard:
+4. Run the setup wizard:
 
    ```bash
    schwab-tracker setup
@@ -131,7 +211,23 @@ token. Re-auth is manual:
 
 1. Install the **User Scripts** plugin from Unraid Community Apps if it is
    not already installed.
-2. Create a new script named `schwab-portfolio-pull` with this body:
+2. Create a new script named `schwab-portfolio-pull`. Use the body that
+   matches your install path.
+
+   **Docker install:**
+
+   ```bash
+   #!/bin/bash
+   docker run --rm \
+       --network=host \
+       -v /mnt/user/appdata/schwab-portfolio-tracker:/data \
+       -v /mnt/user/appdata/schwab-portfolio-tracker/tokens:/root/.schwab_tracker \
+       -w /data \
+       schwab-portfolio-tracker:latest pull \
+       >> /mnt/user/appdata/schwab-portfolio-tracker/pull.log 2>&1
+   ```
+
+   **Native install:**
 
    ```bash
    #!/bin/bash
