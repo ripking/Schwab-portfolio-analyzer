@@ -27,20 +27,33 @@ def send_discord_alert(message: str) -> None:
         print(message)
 
 
+def _format_command(env_var: str, fallback: str) -> str:
+    """Render a command for Discord — fenced code block if customized, inline otherwise."""
+    custom = os.environ.get(env_var, "").strip()
+    if custom:
+        return f"```\n{custom}\n```"
+    return f"`{fallback}`"
+
+
 def check_and_alert_reauth(hours_remaining: float) -> None:
-    if hours_remaining <= 24:
-        send_discord_alert(
-            "⚠️ Schwab re-auth required\n"
-            "Refresh token expires in less than 24 hours.\n"
-            "SSH into Unraid and run: schwab-tracker auth login"
-        )
+    if hours_remaining > 24:
+        return
+    command = _format_command("REAUTH_COMMAND", "schwab-tracker auth login")
+    send_discord_alert(
+        "⚠️ Schwab re-auth required\n"
+        "Refresh token expires in less than 24 hours.\n"
+        "SSH into Unraid and run:\n"
+        f"{command}"
+    )
 
 
 def alert_pull_failure(error_message: str) -> None:
+    command = _format_command("PULL_COMMAND", "schwab-tracker pull")
     send_discord_alert(
         "❌ Schwab portfolio pull failed\n"
         f"Error: {error_message}\n"
-        "Check Unraid and run: schwab-tracker pull"
+        "Check Unraid and run:\n"
+        f"{command}"
     )
 
 

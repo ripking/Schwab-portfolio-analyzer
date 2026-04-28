@@ -306,6 +306,33 @@ PORTFOLIO_DB_NAME=PortfolioDB
 DISCORD_WEBHOOK_URL=
 ```
 
+Optional keys for paste-ready Discord alerts:
+
+```
+REAUTH_COMMAND=
+PULL_COMMAND=
+```
+
+When set, the value is wrapped in a triple-backtick code block in the
+relevant Discord alert so you can copy-paste straight into your terminal.
+On the Docker install path you'd typically set them to your full
+`docker run …` invocation:
+
+```bash
+REAUTH_COMMAND="docker run --rm -it --network=host \
+  -v /mnt/user/appdata/schwab-portfolio-tracker:/data \
+  -v /mnt/user/appdata/schwab-portfolio-tracker/tokens:/root/.schwab_tracker \
+  -w /data schwab-portfolio-tracker:latest auth login"
+
+PULL_COMMAND="docker run --rm --network=host \
+  -v /mnt/user/appdata/schwab-portfolio-tracker:/data \
+  -v /mnt/user/appdata/schwab-portfolio-tracker/tokens:/root/.schwab_tracker \
+  -w /data schwab-portfolio-tracker:latest pull"
+```
+
+When unset, alerts fall back to the bare `schwab-tracker auth login` /
+`schwab-tracker pull` strings (fine for the native install path).
+
 Secrets live in `.env` only; the file is excluded from git via `.gitignore`.
 
 ## Token storage
