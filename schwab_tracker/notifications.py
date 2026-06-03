@@ -9,6 +9,15 @@ import requests
 
 WEBHOOK_TIMEOUT_SEC = 10
 
+DEFAULT_REAUTH_COMMAND = (
+    "docker run --rm -it \\\n"
+    "    --network=host \\\n"
+    "    -v /mnt/user/appdata/schwab-portfolio-tracker:/data \\\n"
+    "    -v /mnt/user/appdata/schwab-portfolio-tracker/tokens:/root/.schwab_tracker \\\n"
+    "    -w /data \\\n"
+    "    schwab-portfolio-tracker:latest auth login"
+)
+
 
 def send_discord_alert(message: str) -> None:
     """Send a message to Discord; fall back to stdout on any failure."""
@@ -28,21 +37,22 @@ def send_discord_alert(message: str) -> None:
 
 
 def _format_command(env_var: str, fallback: str) -> str:
-    """Render a command for Discord — fenced code block if customized, inline otherwise."""
+    """Render a command for Discord — fenced code block if multi-line, inline otherwise."""
     custom = os.environ.get(env_var, "").strip()
-    if custom:
-        return f"```\n{custom}\n```"
-    return f"`{fallback}`"
+    command = custom or fallback
+    if "\n" in command:
+        return f"```bash\n{command}\n```"
+    return f"`{command}`"
 
 
 def check_and_alert_reauth(hours_remaining: float) -> None:
     if hours_remaining > 24:
         return
-    command = _format_command("REAUTH_COMMAND", "schwab-tracker auth login")
+    command = _format_command("REAUTH_COMMAND", DEFAULT_REAUTH_COMMAND)
     send_discord_alert(
         "⚠️ Schwab re-auth required\n"
         "Refresh token expires in less than 24 hours.\n"
-        "SSH into Unraid and run:\n"
+        "SSH into Unraid and paste this:\n"
         f"{command}"
     )
 
